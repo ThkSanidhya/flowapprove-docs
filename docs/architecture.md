@@ -52,6 +52,31 @@ PENDING  ──▶  step 1 PENDING  ──▶  step 2 PENDING  ──▶  step 3
 
 Every transition appends a `DocumentHistory` row. See [Data Model](data-model.md) for the full entity map.
 
+## Versioning
+
+Version control is **only available after a document is rejected**. When the creator uploads a new version:
+
+- A new `DocumentVersion` row is written with an incremented `version_number`.
+- The `Document.file` pointer switches to the new file; the old file is preserved and accessible from the version list.
+- `current_step` resets to **1** and all `DocumentApproval` rows go back to `PENDING`.
+- A `DocumentHistory` entry records the re-upload with its version number.
+
+This lets reviewers compare the new submission against what they rejected without losing the audit trail.
+
+## Email notifications
+
+SMTP-based notifications (configured via `EMAIL_*` settings in `flowapprove_backend/settings.py`) fire on status transitions:
+
+| Event | Recipient |
+|---|---|
+| Document uploaded | first-step approver |
+| Step approved (not final) | next-step approver |
+| Step approved (final) | document creator |
+| Sent back | previous-step approver |
+| Rejected | document creator |
+
+Notification sending lives in `api/utils.py::send_email_notification` and is called from the approve / reject / sendback views. Failures are non-blocking — the workflow state still transitions even if the email can't be delivered.
+
 ## Frontend structure
 
 Components are grouped by feature:
