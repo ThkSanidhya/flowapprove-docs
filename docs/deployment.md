@@ -5,30 +5,43 @@
 
 ## Required environment variables (backend)
 
+See `flowapprove-backend/.env.example` for the canonical list.
+
 | Variable | Purpose | Example |
 |---|---|---|
 | `DJANGO_SECRET_KEY` | Django signing key | long random string |
 | `DJANGO_DEBUG` | `True` / `False` | `False` in prod |
 | `DJANGO_ALLOWED_HOSTS` | comma-separated | `api.example.com,example.com` |
-| `DB_NAME` | MySQL database | `flowapprove` |
-| `DB_USER` | MySQL user | `flowapprove` |
-| `DB_PASSWORD` | MySQL password | — |
-| `DB_HOST` | MySQL host | `db.internal` |
-| `DB_PORT` | MySQL port | `3306` |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | MySQL connection | — |
+| `CORS_ORIGINS` | comma-separated allowed origins (prod only) | `https://app.example.com` |
+| `CSRF_TRUSTED_ORIGINS` | comma-separated (prod only) | `https://app.example.com` |
+| `JWT_ACCESS_MINUTES` | access token lifetime | `15` (prod default) / `60` (dev default) |
+| `SECURE_SSL_REDIRECT` | force HTTPS at Django level | `True` unless TLS is terminated upstream |
+| `EMAIL_BACKEND` | override auto-selected backend | `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` | SMTP server | — |
+| `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | SMTP creds | — |
+| `DEFAULT_FROM_EMAIL` | From header | `noreply@flowapprove.local` |
 
-SMTP is still hardcoded in `settings.py` — move `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` to env vars before production use.
+In **dev** (`DJANGO_DEBUG=True`) the email backend defaults to the console backend so messages print to stdout. In **prod** it defaults to SMTP.
 
 ## Production checklist
 
-- [ ] `DEBUG=False` and a real `SECRET_KEY`
-- [ ] Lock `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` (replace `CORS_ALLOW_ALL_ORIGINS`)
-- [ ] Serve behind HTTPS; set `SECURE_PROXY_SSL_HEADER`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`
-- [ ] Run under `gunicorn` / `uwsgi`, not `runserver`
+- [x] `DEBUG=False` and a real `SECRET_KEY` (env-driven)
+- [x] HSTS + secure cookies + `SECURE_PROXY_SSL_HEADER` (auto-enabled when `DEBUG=False`)
+- [x] `X-Frame-Options=DENY`, content-type nosniff, referrer policy (always on)
+- [x] `CORS_ALLOW_ALL_ORIGINS` is dev-only; prod reads `CORS_ORIGINS`
+- [x] JWT access lifetime shortened to 15 min in prod
+- [x] `/healthz` endpoint for liveness probes
+- [x] Structured request logs with correlation ID
+- [x] DB indexes on hot paths; `DocumentApproval` unique(document, step_order)
+- [ ] Lock `ALLOWED_HOSTS` and `CORS_ORIGINS` to actual domains
+- [ ] Run under `gunicorn` (the Dockerfile already does this)
 - [ ] Collect static: `python manage.py collectstatic`
 - [ ] Reverse-proxy `MEDIA_URL` through nginx or move storage to S3
-- [ ] Rotate JWT signing key; shorten `ACCESS_TOKEN_LIFETIME` (currently 1 day)
 - [ ] Back up MySQL + the media directory
 - [ ] Run `python manage.py migrate --plan` on a staging copy before prod
+- [ ] Wire Sentry / error tracking
+- [ ] Rate-limit `/api/auth/login`
 
 ## Frontend build
 

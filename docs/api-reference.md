@@ -53,6 +53,24 @@ Authorization: Bearer <access_token>
 | GET | `/dashboard/stats` | `{totalDocuments, inProgress, pendingMyAction, approvedByMe, sentBack, completed}` |
 | GET | `/dashboard/documents` | paginated doc list. Query: `page`, `limit`, `status`, `search` |
 
+## Interactive docs & OpenAPI schema
+
+The backend publishes a live OpenAPI 3 schema via **drf-spectacular**:
+
+| Path | What |
+|---|---|
+| `/api/schema/` | raw OpenAPI YAML |
+| `/api/docs/` | Swagger UI (interactive) |
+| `/api/redoc/` | Redoc (reference-style rendering) |
+
+Every response includes an `X-Request-ID` header — quote it in bug reports so backend logs can be correlated.
+
+## Health check
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/healthz` | Liveness + DB reachability. Returns `{"status":"ok"}` (200) or `{"status":"fail"}` (503). No auth. Point Docker / Kubernetes / load balancer probes here. |
+
 ## Error shape
 
 ```json

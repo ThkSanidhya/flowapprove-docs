@@ -20,6 +20,7 @@ nav:
   - Development: docs/development.md
   - Deployment: docs/deployment.md
   - Security: docs/security.md
+  - Changelog: docs/changelog.md
 
 markdown_extensions:
   - admonition

@@ -43,15 +43,40 @@ All sensitive config is env-driven — see [Deployment](deployment.md):
 - `DB_PASSWORD`
 - SMTP credentials (still hardcoded; migrate before production)
 
+## Production security headers
+
+When `DEBUG=False`, the backend automatically enables:
+
+- `SECURE_SSL_REDIRECT` (override with `SECURE_SSL_REDIRECT=False` if TLS is terminated upstream)
+- `SESSION_COOKIE_SECURE` + `CSRF_COOKIE_SECURE`
+- HSTS: `SECURE_HSTS_SECONDS=31536000`, `SECURE_HSTS_INCLUDE_SUBDOMAINS`, `SECURE_HSTS_PRELOAD`
+- `SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO', 'https')`
+
+Always on (dev and prod):
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: same-origin`
+
+## Observability
+
+Every request passes through `api.middleware.RequestIDMiddleware`, which:
+
+1. Reads an inbound `X-Request-ID` header or generates a 16-char UUID.
+2. Attaches the ID to `request.request_id`.
+3. Echoes it back on the response as `X-Request-ID`.
+4. Logs the method + path + status code under logger `request` with the ID in `extra`.
+
+This lets you grep backend logs by an ID the frontend (or your friend filing a bug report) sees.
+
 ## Known gaps
 
 | Gap | Mitigation |
 |---|---|
 | JWT stored in `localStorage` (XSS-exfiltratable) | Consider httpOnly cookies + CSRF tokens |
-| `CORS_ALLOW_ALL_ORIGINS=True` in default settings | Replace with explicit allowlist in prod |
 | No rate limiting on `/auth/login` | Add `django-ratelimit` or an upstream proxy rule |
 | No audit of admin actions beyond `DocumentHistory` | Extend the history table or ship a separate audit log |
-| SMTP creds hardcoded in `settings.py` | Move to env vars |
+| No virus scanning on uploads | Add ClamAV sidecar or VirusTotal integration |
 
 ## Reporting vulnerabilities
 

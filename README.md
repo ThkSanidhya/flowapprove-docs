@@ -57,6 +57,7 @@ FlowApprove turns "please approve this file" chaos into an explicit, ordered wor
 - [Development](docs/development.md) — day-to-day commands
 - [Deployment](docs/deployment.md) — environment variables and production notes
 - [Security](docs/security.md) — auth, multi-tenant scoping, upload rules
+- [Changelog](docs/changelog.md) — notable changes across all three repos
 
 ## Running these docs locally
 
