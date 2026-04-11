@@ -34,21 +34,25 @@ A `Workflow` is an ordered sequence of `WorkflowStep`s, each assigned to a speci
 On upload, a `DocumentApproval` row is created for every step (all `PENDING`). From there:
 
 ```
-     upload                approve                 approve                 approve
-PENDING  ──▶  step 1 PENDING  ──▶  step 2 PENDING  ──▶  step 3 PENDING  ──▶  APPROVED
-                    │                  │                  │
-                    │ reject           │ reject           │ reject
-                    ▼                  ▼                  ▼
-                REJECTED           REJECTED           REJECTED
-
-                    │ sendback (step N → N-1, resets prev approval)
-                    ▼
-             step N-1 PENDING
+                         approve              approve              approve
+  upload  ──▶  step 1 ────────────▶ step 2 ────────────▶ step 3 ────────────▶ APPROVED
+               │                    │                    │
+               │ recall             │ reject             │ sendback
+               ▼                    ▼                    ▼
+           CANCELLED             REJECTED            step 1 or 2 (policy-gated)
+           (creator)             │                    │
+                                 │ upload-version     │ upload-version
+                                 │ (creator, full     │ (current step user,
+                                 │  reset to step 1)  │  partial resume)
+                                 ▼                    ▼
+                               step 1 PENDING      resume forward
 ```
 
-- **approve** — only the user assigned to `current_step` may approve. Advances `current_step` or finalizes `APPROVED`. Wrapped in `transaction.atomic()` + `select_for_update()` to serialize concurrent requests.
-- **reject** — only the current-step assignee. Sets `status = REJECTED`.
-- **sendback** — bounces one step back, marks the current approval `REJECTED`, resets the previous step to `PENDING`, and logs the reason.
+- **approve** — only the user assigned to `current_step` may approve. Advances `current_step` or finalizes `APPROVED`. Wrapped in `transaction.atomic()` + `select_for_update()`.
+- **reject** — only the current-step assignee. Sets `status = REJECTED` and resets every sibling approval to PENDING so the creator can upload a revised version that restarts the workflow cleanly.
+- **sendback** — current-step assignee sends the document back to any previous step (subject to the workflow's `sendback_type` policy). Partial reset: approvals from the target step onward become PENDING, earlier approved steps stay APPROVED.
+- **upload-version** — after rejection, the **creator** uploads a revised file; full reset to step 1. After sendback, the **current-step user** uploads; no further reset. Old file is archived as a `DocumentVersion` row.
+- **recall** — the creator withdraws a PENDING document mid-flow. Status becomes `CANCELLED` and all approvals are cleared. Terminal — document can't be re-opened.
 
 Every transition appends a `DocumentHistory` row. See [Data Model](data-model.md) for the full entity map.
 

@@ -36,6 +36,7 @@ Organization ──┬──< User
 |---|---|---|
 | `name` | varchar(255) | |
 | `organization` | FK → Organization | tenant scope |
+| `sendback_type` | `PREVIOUS_ONLY` \| `ANY_PREVIOUS` | default `PREVIOUS_ONLY`. Controls whether approvers may skip back multiple steps during sendback. |
 
 ### WorkflowStep
 | field | type | notes |
@@ -49,7 +50,7 @@ Organization ──┬──< User
 |---|---|---|
 | `title` / `description` | text | |
 | `file` / `file_name` / `file_url` / `file_type` / `file_size` | | stored under `MEDIA_ROOT/documents/` |
-| `status` | `PENDING` \| `APPROVED` \| `REJECTED` | |
+| `status` | `PENDING` \| `APPROVED` \| `REJECTED` \| `CANCELLED` | `CANCELLED` is set by creator recall |
 | `current_step` | int | 1-indexed pointer into workflow steps |
 | `organization` | FK → Organization | tenant scope |
 | `workflow` | FK → Workflow | nullable (SET_NULL on delete) |

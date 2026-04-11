@@ -4,6 +4,26 @@ All notable changes to FlowApprove. Entries are grouped by repo.
 
 ## Unreleased
 
+### Backend — approval workflow features (enterprise parity)
+
+- **Version upload** (`POST /documents/<id>/upload-version`): revised file upload after sendback (current-step user, partial resume) or rejection (creator only, full reset to step 1). Archives old file as `DocumentVersion`. Same 50 MB + MIME whitelist as initial upload.
+- **Configurable sendback targets**: new `Workflow.sendback_type` field (`PREVIOUS_ONLY` default, `ANY_PREVIOUS` alternative). `sendback` endpoint accepts optional `target_step`; partial reset clears only approvals from target step onward.
+- **Creator recall** (`POST /documents/<id>/recall`): creator can withdraw a PENDING document, setting status to new `CANCELLED` value.
+- `reject_document` now runs under `transaction.atomic()` + `select_for_update()` and resets sibling approvals so a version upload after rejection restarts cleanly.
+- `get_document_detail` exposes new flags: `canRecall`, `canUploadVersion`, `sendbackType`.
+- `DocumentVersion` gained a `file_type` column (previously missing).
+- Migration `0003` adds all the above schema changes.
+- **18 new regression tests** — 31 total, all passing.
+
+### Frontend — new UI surfaces
+
+- Version upload dropzone in the Versions tab, shown when `canUploadVersion` is true (copy adapts to rejected vs sent-back state).
+- Recall card + confirmation modal shown when `canRecall` is true.
+- Send-back modal gains a step selector when the workflow is `ANY_PREVIOUS`.
+- Workflow form has a new send-back policy dropdown.
+- `CANCELLED` status rendered in grey.
+
+
 ### Backend — security & hardening
 
 - **CRITICAL**: fixed multi-tenant IDOR on `approve`/`reject`/`sendback` — all queries now scope by `request.user.organization`.
