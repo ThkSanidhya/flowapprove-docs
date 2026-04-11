@@ -1,5 +1,7 @@
 # Development
 
+See [Getting Started](getting-started.md) for first-time setup on Windows, macOS, or Linux (including the Docker shortcut). This page is the day-to-day command reference.
+
 ## Backend (`flowapprove-backend/`)
 
 ```bash
@@ -7,9 +9,12 @@ python manage.py migrate                 # apply migrations
 python manage.py makemigrations api      # after model changes
 python manage.py runserver                # dev server :8000
 python manage.py createsuperuser
-python manage.py test api                 # full suite
-python manage.py test api.tests.ClassName.test_method   # single test
+python manage.py test api --settings=flowapprove_backend.settings_test   # full suite (SQLite, no MySQL needed)
+python manage.py test api.tests.RecallDocumentTests.test_creator_can_recall_pending_document --settings=flowapprove_backend.settings_test   # single test
+python manage.py spectacular --file schema.yml    # export OpenAPI schema
 ```
+
+On Windows, replace `python` with `py` if Python was installed via the python.org installer.
 
 ### Adding an endpoint
 
