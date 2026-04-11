@@ -4,6 +4,17 @@ All notable changes to FlowApprove. Entries are grouped by repo.
 
 ## Unreleased
 
+### Switched from MySQL to PostgreSQL
+
+- Backend database is now **PostgreSQL 16**. Switched for simpler free deployment (Render, Railway, Neon all offer free Postgres) and to avoid the Windows `mysqlclient` C++ build headaches.
+- `requirements.txt`: `mysqlclient` → `psycopg2-binary` (pre-compiled wheels on all platforms, no system deps).
+- `settings.py`: engine `django.db.backends.postgresql`, default port 5432. Added a `DATABASE_URL` parser so hosting providers (Render/Railway/Heroku/Fly.io/Neon) can inject a single URL and have it override the individual `DB_*` fields.
+- `docker-compose.yml`: `mysql:8.0` → `postgres:16-alpine`, `pg_isready` healthcheck, `POSTGRES_*` env vars.
+- `Dockerfile`: dropped `default-libmysqlclient-dev` + `build-essential` (no compilation needed); added `libpq5` for psycopg2 runtime; entrypoint now also runs `collectstatic` and honors the `PORT` env var so Render/Railway can set it.
+- Django migrations are db-agnostic and applied cleanly to a fresh Postgres instance — no data loss for anyone running a dev database, just blow away the old MySQL DB and run `migrate`.
+- All 31 regression tests still pass.
+
+
 ### Backend — approval workflow features (enterprise parity)
 
 - **Version upload** (`POST /documents/<id>/upload-version`): revised file upload after sendback (current-step user, partial resume) or rejection (creator only, full reset to step 1). Archives old file as `DocumentVersion`. Same 50 MB + MIME whitelist as initial upload.
@@ -50,7 +61,7 @@ All notable changes to FlowApprove. Entries are grouped by repo.
 ### Backend — tests
 
 - 13 regression tests covering multi-tenant isolation, non-assignee authorization, workflow step assignment, upload validation (cross-org, oversized, bad MIME).
-- `settings_test.py` runs tests on SQLite in-memory — no MySQL required.
+- `settings_test.py` runs tests on SQLite in-memory — no Postgres required.
 - GitHub Actions CI: `manage.py check` + test suite + OpenAPI schema validation.
 
 ### Frontend

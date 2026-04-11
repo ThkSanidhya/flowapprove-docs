@@ -12,7 +12,8 @@ See `flowapprove-backend/.env.example` for the canonical list.
 | `DJANGO_SECRET_KEY` | Django signing key | long random string |
 | `DJANGO_DEBUG` | `True` / `False` | `False` in prod |
 | `DJANGO_ALLOWED_HOSTS` | comma-separated | `api.example.com,example.com` |
-| `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | MySQL connection | — |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | PostgreSQL connection | — |
+| `DATABASE_URL` | Single-URL override used by Render / Railway / Heroku / Fly.io / Neon | `postgres://user:pw@host:5432/db` |
 | `CORS_ORIGINS` | comma-separated allowed origins (prod only) | `https://app.example.com` |
 | `CSRF_TRUSTED_ORIGINS` | comma-separated (prod only) | `https://app.example.com` |
 | `JWT_ACCESS_MINUTES` | access token lifetime | `15` (prod default) / `60` (dev default) |
@@ -38,7 +39,7 @@ In **dev** (`DJANGO_DEBUG=True`) the email backend defaults to the console backe
 - [ ] Run under `gunicorn` (the Dockerfile already does this)
 - [ ] Collect static: `python manage.py collectstatic`
 - [ ] Reverse-proxy `MEDIA_URL` through nginx or move storage to S3
-- [ ] Back up MySQL + the media directory
+- [ ] Back up Postgres + the media directory
 - [ ] Run `python manage.py migrate --plan` on a staging copy before prod
 - [ ] Wire Sentry / error tracking
 - [ ] Rate-limit `/api/auth/login`
@@ -64,7 +65,7 @@ DB_NAME=flowapprove
 DB_USER=flowapprove
 DB_PASSWORD=change-me
 DB_HOST=db.internal
-DB_PORT=3306
+DB_PORT=5432
 ```
 
 Load it with `direnv`, `systemd` `EnvironmentFile=`, or your container runtime.

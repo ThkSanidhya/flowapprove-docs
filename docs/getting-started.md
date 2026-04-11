@@ -12,7 +12,7 @@ Three ways to run FlowApprove, in order of ease. **If you're on Windows, use Doc
 
 ## 1. Docker (recommended)
 
-You only need **Git** and **[Docker Desktop](https://www.docker.com/products/docker-desktop/)**. No Python, Node, or MySQL install required.
+You only need **Git** and **[Docker Desktop](https://www.docker.com/products/docker-desktop/)**. No Python, Node, or Postgres install required.
 
 ### Install Docker Desktop
 
@@ -32,12 +32,12 @@ docker compose -f flowapprove-backend/docker-compose.yml up --build
 
 First build takes 3–5 minutes. When you see `gunicorn` log lines, it's ready.
 
-| Service  | URL                                  |
-|----------|--------------------------------------|
-| Frontend | <http://localhost:5173>              |
-| Backend  | <http://localhost:8000/api>          |
-| API docs | <http://localhost:8000/api/docs/>    |
-| MySQL    | localhost:3306 (`flowapprove` / `flowapprove`) |
+| Service   | URL                                  |
+|-----------|--------------------------------------|
+| Frontend  | <http://localhost:5173>              |
+| Backend   | <http://localhost:8000/api>          |
+| API docs  | <http://localhost:8000/api/docs/>    |
+| Postgres  | localhost:5432 (`flowapprove` / `flowapprove`) |
 
 ### Stop everything
 
@@ -59,7 +59,7 @@ Jump to [First login](#first-login).
 
 - **Python 3.12+**
 - **Node.js 20+** and npm
-- **MySQL 8+** running locally
+- **PostgreSQL 14+** running locally
 
 ### Clone the three repos (or the meta-repo)
 
@@ -85,10 +85,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Create a UTF-8 database:
+Create a Postgres user and database:
 ```bash
-mysql -u root -p -e "CREATE DATABASE flowapprove CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+sudo -u postgres createuser --pwprompt flowapprove   # remember the password
+sudo -u postgres createdb -O flowapprove flowapprove
 ```
+(macOS Homebrew: drop the `sudo -u postgres` prefix.)
 
 Set env vars:
 ```bash
@@ -125,9 +127,10 @@ Only do this if you actively prefer not to use Docker — it's strictly more wor
 
 - **Python 3.12+** — <https://www.python.org/downloads/> → during install, tick **"Add python.exe to PATH"**.
 - **Node.js 20+** — <https://nodejs.org/> → pick the "LTS" Windows installer.
-- **MySQL 8+** — <https://dev.mysql.com/downloads/installer/> → the "MySQL Installer for Windows" bundles the server and Workbench. Remember the root password you set during setup.
-- **Microsoft C++ Build Tools** — <https://visualstudio.microsoft.com/visual-cpp-build-tools/> → "Desktop development with C++". Needed to compile the `mysqlclient` Python package.
+- **PostgreSQL 16** — <https://www.postgresql.org/download/windows/> → the EDB installer bundles the server and pgAdmin. Remember the `postgres` superuser password you set.
 - **Git for Windows** — <https://git-scm.com/download/win>.
+
+No Microsoft C++ Build Tools needed — `psycopg2-binary` ships pre-compiled wheels for Windows.
 
 ### Clone (PowerShell)
 
@@ -153,9 +156,10 @@ If PowerShell refuses to run the activate script:
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
-Create the database. Open **MySQL Workbench** (or **MySQL Command Line Client**) and run:
+Create the database. Open **pgAdmin** (installed with Postgres), right-click **Databases** → Create → Database. Or from **SQL Shell (psql)** in the Start menu:
 ```sql
-CREATE DATABASE flowapprove CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER flowapprove WITH PASSWORD 'your-password';
+CREATE DATABASE flowapprove OWNER flowapprove;
 ```
 
 Set environment variables for this PowerShell session:
@@ -163,13 +167,13 @@ Set environment variables for this PowerShell session:
 $env:DJANGO_SECRET_KEY = "dev-only-secret"
 $env:DJANGO_DEBUG      = "True"
 $env:DB_NAME           = "flowapprove"
-$env:DB_USER           = "root"
-$env:DB_PASSWORD       = "your-mysql-root-password"
+$env:DB_USER           = "flowapprove"
+$env:DB_PASSWORD       = "your-password"
 $env:DB_HOST           = "127.0.0.1"
-$env:DB_PORT           = "3306"
+$env:DB_PORT           = "5432"
 ```
 
-*(In **Command Prompt** instead of PowerShell, use `set DB_PASSWORD=your-mysql-root-password` — one per line, no `$` prefix.)*
+*(In **Command Prompt**, use `set DB_PASSWORD=your-password` — one per line, no `$` prefix.)*
 
 Migrate and run:
 ```powershell
@@ -212,20 +216,15 @@ Jump to [First login](#first-login).
 
 **"docker: command not found"** — Docker Desktop isn't running (Windows/macOS) or the `docker` CLI isn't installed (Linux). Open Docker Desktop and wait for the whale icon to go steady.
 
-**"port is already allocated" for 3306 / 8000 / 5173** — something else is using that port. Stop it, or edit `flowapprove-backend/docker-compose.yml` and change the `host:container` mapping, e.g. `3307:3306`.
+**"port is already allocated" for 5432 / 8000 / 5173** — something else is using that port. Stop it, or edit `flowapprove-backend/docker-compose.yml` and change the `host:container` mapping, e.g. `5433:5432`.
 
 **Build hangs on "downloading"** — your network is slow. First build is 3–5 minutes. Subsequent `up` commands are instant.
 
 ### Native backend
 
-**`MySQLdb.OperationalError: (1045, "Access denied for user 'root'")`** — your MySQL password is wrong or `DB_PASSWORD` isn't set. On Windows PowerShell check with `$env:DB_PASSWORD`; on cmd use `echo %DB_PASSWORD%`; on Linux/macOS use `echo $DB_PASSWORD`.
+**`django.db.utils.OperationalError: connection to server at "localhost"`** — Postgres isn't running, or `DB_HOST` / `DB_PORT` are wrong. Check `pg_isready -h 127.0.0.1 -p 5432` (Linux/macOS) or open **Services** and confirm `postgresql-x64-16` is running (Windows).
 
-**`MySQLdb.OperationalError: (1366, "Incorrect string value: '\xF0\x9F...'")`** — your database is in `latin1` or 3-byte `utf8`. Fix:
-```sql
-ALTER DATABASE flowapprove CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-**`mysqlclient` wheel fails to build on Windows** — Microsoft C++ Build Tools aren't installed, or they're installed without the "Desktop development with C++" workload. Switch to Docker if this is frustrating.
+**`FATAL: password authentication failed for user "flowapprove"`** — the `DB_PASSWORD` doesn't match what you set when creating the user. Try `PGPASSWORD=... psql -h 127.0.0.1 -U flowapprove flowapprove` to verify credentials outside Django.
 
 **Workflows page throws "Column 'organization_id' cannot be null"** — you're logged in as a superuser created via `createsuperuser`, which doesn't set an organization. Register via the frontend instead, or assign the user an Organization in the Django admin.
 

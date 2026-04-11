@@ -58,7 +58,7 @@ FlowApprove turns "please approve this file" chaos into an explicit, ordered wor
 
 | Layer    | Stack |
 |----------|-------|
-| Backend  | Python 3.12, Django 5, Django REST Framework, SimpleJWT, MySQL 8, drf-spectacular, gunicorn |
+| Backend  | Python 3.12, Django 5, Django REST Framework, SimpleJWT, PostgreSQL 16, drf-spectacular, gunicorn |
 | Frontend | React 19, Vite, Axios, React Router v7, TanStack Query, react-pdf, docx-preview, react-dropzone |
 | Docs     | MkDocs + Material theme |
 | Infra    | Docker Compose, GitHub Actions CI |

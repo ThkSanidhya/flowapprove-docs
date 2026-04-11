@@ -9,7 +9,7 @@ python manage.py migrate                 # apply migrations
 python manage.py makemigrations api      # after model changes
 python manage.py runserver                # dev server :8000
 python manage.py createsuperuser
-python manage.py test api --settings=flowapprove_backend.settings_test   # full suite (SQLite, no MySQL needed)
+python manage.py test api --settings=flowapprove_backend.settings_test   # full suite (SQLite, no Postgres needed)
 python manage.py test api.tests.RecallDocumentTests.test_creator_can_recall_pending_document --settings=flowapprove_backend.settings_test   # single test
 python manage.py spectacular --file schema.yml    # export OpenAPI schema
 ```
