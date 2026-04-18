@@ -71,7 +71,7 @@ One row per step per document.
 Discussion thread, optionally anchored to a PDF page via `page_number`.
 
 ### DocumentHistory
-Append-only audit log. Every approve/reject/sendback writes a row with `action` and `comment`.
+Append-only audit log. Every transition writes a row with `action` and `comment`. Observed actions: `UPLOADED`, `APPROVED`, `REJECTED`, `SENT_BACK`, `RECALLED`, `VERSION_UPLOADED`, `REASSIGNED`.
 
 ### DocumentVersion
 Re-uploads. `version_number` increments per document.
@@ -84,3 +84,5 @@ These must be preserved by any code touching the approval flow:
 2. **`Document.current_step`, `DocumentApproval.status`, and `DocumentHistory`** are kept in sync inside a single `transaction.atomic()`.
 3. **Only the user at `current_step`** may approve / reject / sendback.
 4. On sendback, the previous step's approval is reset to `PENDING` (cleared `approved_at`, empty `comment`).
+5. A `Workflow` with any `PENDING` `Document` referencing it is immutable — admin edit/delete returns **400** until those documents resolve.
+6. Admin reassignment (`POST /documents/<id>/reassign/`) mutates only `DocumentApproval.user` on a single row; it never touches `current_step` or `Document.status`.

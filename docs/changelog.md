@@ -4,6 +4,21 @@ All notable changes to FlowApprove. Entries are grouped by repo.
 
 ## Unreleased
 
+### Core workflow improvements — safety, cancelled recovery, admin reassignment
+
+Backend (`api/views.py`, `api/urls.py`):
+
+- **Workflow edit/delete guard**: `PUT`/`DELETE /workflows/<id>` now returns **400** when any `PENDING` `Document` still references the workflow. Prevents rug-pulling live approval chains.
+- **Cancelled → version recovery**: `upload-version` now also accepts documents with status `CANCELLED` (not only `REJECTED`). Creator uploads a new file → status resets to `PENDING`, `current_step` back to 1, prior approvals wiped. Closes the dead-end after a self-recall.
+- **Admin step reassignment** (new endpoint): `POST /documents/<id>/reassign/` with `{stepOrder, newUserId}` — admin only, scoped to the caller's organization. Swaps the `DocumentApproval.user` on a single step without moving the workflow pointer, and appends a `REASSIGNED` `DocumentHistory` row. Useful when an approver is OOO.
+
+Frontend (`flowapprove-frontend/frontend/`):
+
+- **Admin "Reassign Step" card + modal** on the document detail page (`EnhancedDocumentDetail.jsx`) — visible only for `ADMIN` users while the document is `PENDING`. Modal lists pending steps with their current approver and an org-user dropdown (lazy-loaded from `userService.getAll()`).
+- **Workflow list delete toast** now surfaces the backend "currently being used by N active document(s)" message instead of a generic failure.
+- **Version-upload panel copy** now covers the `CANCELLED` case ("You recalled this document. Upload a revised file to restart the workflow from step 1.").
+- New service method `documentService.reassign(id, stepOrder, newUserId)`.
+
 ### Switched from MySQL to PostgreSQL
 
 - Backend database is now **PostgreSQL 16**. Switched for simpler free deployment (Render, Railway, Neon all offer free Postgres) and to avoid the Windows `mysqlclient` C++ build headaches.

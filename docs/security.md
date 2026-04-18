@@ -26,6 +26,10 @@ Cross-checks that must also hold:
 
 For `approve` / `reject` / `sendback`, the caller must be the user tied to the document's `current_step` `DocumentApproval`. The approve flow wraps its check+mutation in `transaction.atomic()` + `select_for_update()` to prevent concurrent double-advances.
 
+For `recall` and `upload-version` (when status is `REJECTED` or `CANCELLED`), the caller must be the document's `created_by`.
+
+For `reassign`, the caller must be `ADMIN` *and* both the document and the new approver must belong to the caller's organization. The step-swap is the only admin override of the step-assignee rule and is always audited via a `REASSIGNED` `DocumentHistory` entry.
+
 ## File upload
 
 - Max size: **50 MB** (returns 413 on overflow).

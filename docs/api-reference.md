@@ -32,8 +32,8 @@ Authorization: Bearer <access_token>
 | GET  | `/workflows` | list workflows in caller's org |
 | POST | `/workflows` | create; body: `{name, sendbackType?, steps: [{userId}, ...]}` — each `userId` must belong to caller's org. `sendbackType` is `PREVIOUS_ONLY` (default) or `ANY_PREVIOUS`. |
 | GET  | `/workflows/<id>` | detail (admin only) |
-| PUT  | `/workflows/<id>` | replace name + steps (admin only) |
-| DELETE | `/workflows/<id>` | delete (admin only) |
+| PUT  | `/workflows/<id>` | replace name + steps (admin only). Returns **400** if any `PENDING` `Document` references this workflow. |
+| DELETE | `/workflows/<id>` | delete (admin only). Returns **400** if any `PENDING` `Document` references this workflow. |
 
 ## Documents
 
@@ -45,8 +45,9 @@ Authorization: Bearer <access_token>
 | POST | `/documents/<id>/approve` | body: `{comment}` — only the current-step assignee |
 | POST | `/documents/<id>/reject` | body: `{comment}` — only the current-step assignee. Sets status=`REJECTED` and resets all sibling approvals so the creator can re-upload. |
 | POST | `/documents/<id>/sendback` | body: `{reason, target_step?}` — only the current-step assignee. `target_step` is optional and defaults to `current_step - 1`. Workflows with `sendback_type='PREVIOUS_ONLY'` reject non-adjacent targets. Approvals from `target_step` onward are reset to PENDING; earlier approved steps stay APPROVED (partial reset). |
-| POST | `/documents/<id>/upload-version` | multipart: `file`, optional `version_note`. Archives the current file to `DocumentVersion` and replaces it. Auth: creator only (if status=`REJECTED`, full reset back to step 1) or current-step assignee (if status=`PENDING` post-sendback, no additional reset). |
-| POST | `/documents/<id>/recall` | body: `{reason}` — only the creator, only while status=`PENDING`. Sets status=`CANCELLED` and clears all approvals. |
+| POST | `/documents/<id>/upload-version` | multipart: `file`, optional `version_note`. Archives the current file to `DocumentVersion` and replaces it. Auth: creator only (if status=`REJECTED` **or** `CANCELLED`, full reset back to step 1) or current-step assignee (if status=`PENDING` post-sendback, no additional reset). |
+| POST | `/documents/<id>/recall` | body: `{reason}` — only the creator, only while status=`PENDING`. Sets status=`CANCELLED` and clears all approvals. Creator can subsequently `upload-version` to restart the workflow. |
+| POST | `/documents/<id>/reassign` | body: `{stepOrder, newUserId}` — **admin only**. Swaps the `DocumentApproval.user` for the given step; `current_step` is not moved. Writes a `REASSIGNED` entry to `DocumentHistory`. The new user must belong to the caller's organization. |
 
 ## Dashboard
 
